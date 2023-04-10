@@ -35,13 +35,14 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.android.calendar.CalendarEventModel.ReminderEntry;
+import com.android.calendar.event.OnEventDeletedListener;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import ws.xsoh.etar.R;
 
-public class EventInfoActivity extends AppCompatActivity {
+public class EventInfoActivity extends AppCompatActivity implements OnEventDeletedListener {
 
     private static final String TAG = "EventInfoActivity";
     private EventInfoFragment mInfoFragment;
@@ -191,5 +192,11 @@ public class EventInfoActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+    }
+
+    @Override
+    public void onEventDeleted() {
+        mInfoFragment.mEventDeleted = true;
+        finish();
     }
 }

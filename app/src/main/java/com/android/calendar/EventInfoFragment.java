@@ -106,10 +106,12 @@ import com.android.calendar.CalendarEventModel.Attendee;
 import com.android.calendar.CalendarEventModel.ReminderEntry;
 import com.android.calendar.alerts.QuickResponseActivity;
 import com.android.calendar.event.AttendeesView;
+import com.android.calendar.event.DeleteEventDialogFragment;
 import com.android.calendar.event.EditEventActivity;
 import com.android.calendar.event.EditEventHelper;
 import com.android.calendar.event.EventColorPickerDialog;
 import com.android.calendar.event.EventViewUtils;
+import com.android.calendar.event.OnEventDeletedListener;
 import com.android.calendar.icalendar.IcalendarUtils;
 import com.android.calendar.icalendar.Organizer;
 import com.android.calendar.icalendar.VCalendar;
@@ -136,7 +138,7 @@ import ws.xsoh.etar.BuildConfig;
 import ws.xsoh.etar.R;
 
 public class EventInfoFragment extends DialogFragment implements OnCheckedChangeListener,
-        CalendarController.EventHandler, OnClickListener, DeleteEventHelper.DeleteNotifyListener,
+        CalendarController.EventHandler, OnClickListener,
         OnColorSelectedListener {
 
     public static final boolean DEBUG = false;
@@ -152,7 +154,6 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
     protected static final String BUNDLE_KEY_START_MILLIS = "key_start_millis";
     protected static final String BUNDLE_KEY_END_MILLIS = "key_end_millis";
     protected static final String BUNDLE_KEY_IS_DIALOG = "key_fragment_is_dialog";
-    protected static final String BUNDLE_KEY_DELETE_DIALOG_VISIBLE = "key_delete_dialog_visible";
     protected static final String BUNDLE_KEY_WINDOW_STYLE = "key_window_style";
     protected static final String BUNDLE_KEY_CALENDAR_COLOR = "key_calendar_color";
     protected static final String BUNDLE_KEY_CALENDAR_COLOR_INIT = "key_calendar_color_init";
@@ -347,8 +348,6 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
     private boolean mIsBusyFreeCalendar;
     private int mNumOfAttendees;
     private EditResponseHelper mEditResponseHelper;
-    private boolean mDeleteDialogVisible = false;
-    private DeleteEventHelper mDeleteHelper;
     private int mOriginalAttendeeResponse;
     private int mAttendeeResponseFromIntent = Attendees.ATTENDEE_STATUS_NONE;
     private int mUserSetResponse = Attendees.ATTENDEE_STATUS_NONE;
@@ -360,8 +359,8 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
     private boolean mHasAlarm;
     private int mMaxReminders;
     private String mCalendarAllowedReminders;
-    // Used to prevent saving changes in event if it is being deleted.
-    private boolean mEventDeletionStarted = false;
+    // Used to prevent saving changes if event is deleted.
+    protected boolean mEventDeleted = false;
     private TextView mTitle;
     private TextView mWhenDateTime;
     private TextView mWhere;
@@ -420,19 +419,6 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
     private OnItemSelectedListener mReminderChangeListener;
     private boolean mIsDialog = false;
     private boolean mIsPaused = true;
-    private boolean mDismissOnResume = false;
-    private final Runnable onDeleteRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (EventInfoFragment.this.mIsPaused) {
-                mDismissOnResume = true;
-                return;
-            }
-            if (EventInfoFragment.this.isVisible()) {
-                EventInfoFragment.this.dismiss();
-            }
-        }
-    };
     private int mX = -1;
     private int mY = -1;
     private int mMinTop;         // Dialog cannot be above this location
@@ -736,8 +722,6 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
             mIsDialog = savedInstanceState.getBoolean(BUNDLE_KEY_IS_DIALOG, false);
             mWindowStyle = savedInstanceState.getInt(BUNDLE_KEY_WINDOW_STYLE,
                     DIALOG_WINDOW_STYLE);
-            mDeleteDialogVisible =
-                savedInstanceState.getBoolean(BUNDLE_KEY_DELETE_DIALOG_VISIBLE,false);
             mCalendarColor = savedInstanceState.getInt(BUNDLE_KEY_CALENDAR_COLOR);
             mCalendarColorInitialized =
                     savedInstanceState.getBoolean(BUNDLE_KEY_CALENDAR_COLOR_INIT);
@@ -856,12 +840,8 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
                 if (!mCanModifyCalendar) {
                     return;
                 }
-                mDeleteHelper =
-                        new DeleteEventHelper(mContext, mActivity, !mIsDialog && !mIsTabletConfig /* exitWhenDone */);
-                mDeleteHelper.setDeleteNotificationListener(EventInfoFragment.this);
-                mDeleteHelper.setOnDismissListener(createDeleteOnDismissListener());
-                mDeleteDialogVisible = true;
-                mDeleteHelper.delete(mStartMillis, mEndMillis, mEventId, -1, onDeleteRunnable);
+                DeleteEventDialogFragment.Companion.newInstance(mEventId, mStartMillis, mEndMillis)
+                        .show(activity.getSupportFragmentManager(), null);
             }
         });
 
@@ -1025,7 +1005,6 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
         outState.putLong(BUNDLE_KEY_END_MILLIS, mEndMillis);
         outState.putBoolean(BUNDLE_KEY_IS_DIALOG, mIsDialog);
         outState.putInt(BUNDLE_KEY_WINDOW_STYLE, mWindowStyle);
-        outState.putBoolean(BUNDLE_KEY_DELETE_DIALOG_VISIBLE, mDeleteDialogVisible);
         outState.putInt(BUNDLE_KEY_CALENDAR_COLOR, mCalendarColor);
         outState.putBoolean(BUNDLE_KEY_CALENDAR_COLOR_INIT, mCalendarColorInitialized);
         outState.putInt(BUNDLE_KEY_ORIGINAL_COLOR, mOriginalColor);
@@ -1109,12 +1088,9 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
             doEdit();
             mActivity.finish();
         } else if (itemId == R.id.info_action_delete) {
-            mDeleteHelper =
-                    new DeleteEventHelper(mActivity, mActivity, true /* exitWhenDone */);
-            mDeleteHelper.setDeleteNotificationListener(EventInfoFragment.this);
-            mDeleteHelper.setOnDismissListener(createDeleteOnDismissListener());
-            mDeleteDialogVisible = true;
-            mDeleteHelper.delete(mStartMillis, mEndMillis, mEventId, -1, onDeleteRunnable);
+
+            DeleteEventDialogFragment.Companion.newInstance(mEventId, mStartMillis, mEndMillis)
+                    .show(((AppCompatActivity)getActivity()).getSupportFragmentManager(), null);
         } else if (itemId == R.id.info_action_change_color) {
             showEventColorPickerDialog();
         } else if (itemId == R.id.info_action_share_event) {
@@ -1333,7 +1309,7 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
     @Override
     public void onStop() {
         Activity act = getActivity();
-        if (!mEventDeletionStarted && act != null && !act.isChangingConfigurations()) {
+        if (!mEventDeleted && act != null && !act.isChangingConfigurations()) {
             saveEvent();
         }
         super.onStop();
@@ -2123,15 +2099,7 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
     @Override
     public void onPause() {
         mIsPaused = true;
-        mHandler.removeCallbacks(onDeleteRunnable);
         super.onPause();
-        // Remove event deletion alert box since it is being rebuild in the OnResume
-        // This is done to get the same behavior on OnResume since the AlertDialog is gone on
-        // rotation but not if you press the HOME key
-        if (mDeleteDialogVisible && mDeleteHelper != null) {
-            mDeleteHelper.dismissAlertDialog();
-            mDeleteHelper = null;
-        }
         if (mTentativeUserSetResponse != Attendees.ATTENDEE_STATUS_NONE
                 && mEditResponseHelper != null) {
             mEditResponseHelper.dismissAlertDialog();
@@ -2146,17 +2114,8 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
             applyDialogParams();
         }
         mIsPaused = false;
-        if (mDismissOnResume) {
-            mHandler.post(onDeleteRunnable);
-        }
-        // Display the "delete confirmation" or "edit response helper" dialog if needed
-        if (mDeleteDialogVisible) {
-            mDeleteHelper = new DeleteEventHelper(
-                    mContext, mActivity,
-                    !mIsDialog && !mIsTabletConfig /* exitWhenDone */);
-            mDeleteHelper.setOnDismissListener(createDeleteOnDismissListener());
-            mDeleteHelper.delete(mStartMillis, mEndMillis, mEventId, -1, onDeleteRunnable);
-        } else if (mTentativeUserSetResponse != Attendees.ATTENDEE_STATUS_NONE) {
+        // Display the "edit response helper" dialog if needed
+        if (mTentativeUserSetResponse != Attendees.ATTENDEE_STATUS_NONE) {
             int buttonId = findButtonIdForResponse(mTentativeUserSetResponse);
             mResponseRadioGroup.check(buttonId);
             mEditResponseHelper.showDialog(mEditResponseHelper.getWhichEvents());
@@ -2294,24 +2253,6 @@ public class EventInfoFragment extends DialogFragment implements OnCheckedChange
         i.putExtra(QuickResponseActivity.EXTRA_EVENT_ID, mEventId);
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(i);
-    }
-
-    @Override
-    public void onDeleteStarted() {
-        mEventDeletionStarted = true;
-    }
-
-    private Dialog.OnDismissListener createDeleteOnDismissListener() {
-        return new Dialog.OnDismissListener() {
-                    @Override
-                    public void onDismiss(DialogInterface dialog) {
-                        // Since OnPause will force the dialog to dismiss , do
-                        // not change the dialog status
-                        if (!mIsPaused) {
-                            mDeleteDialogVisible = false;
-                        }
-                    }
-                };
     }
 
     public long getEventId() {

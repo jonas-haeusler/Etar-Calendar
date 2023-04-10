@@ -766,6 +766,10 @@
     <string name="show_time_start_end">Start and end time</string>
     <string name="show_time_start_end_below">Start and end time below the event</string>
 
+    <string name="delete_selected">Only this event</string>
+    <string name="delete_all_following">This and future events</string>
+    <string name="delete_all">All events</string>
+
     <!-- Preferences -->
     <string name="preferences_calendar_no_display_name">Unnamed calendar</string>
     <string name="preferences_calendar_account">%1$s account</string>
