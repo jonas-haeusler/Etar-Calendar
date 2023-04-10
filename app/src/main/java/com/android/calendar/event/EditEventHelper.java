@@ -317,6 +317,8 @@ public class EditEventHelper {
             return false;
         }
 
+        // -----------------------------------------------------------------------------------------
+
         ArrayList<ContentProviderOperation> ops = new ArrayList<ContentProviderOperation>();
         int eventIdIndex = -1;
 

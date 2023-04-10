@@ -33,7 +33,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 
 import com.android.calendar.event.EditEventHelper;
-import com.android.calendar.persistence.CalendarRepository;
+import com.android.calendar.persistence.calendar.CalendarRepository;
 import com.android.calendarcommon2.EventRecurrence;
 import com.android.calendarcommon2.Time;
 

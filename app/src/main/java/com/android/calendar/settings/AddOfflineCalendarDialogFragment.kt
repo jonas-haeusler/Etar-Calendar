@@ -26,7 +26,7 @@ import android.text.TextWatcher
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.DialogFragment
-import com.android.calendar.persistence.CalendarRepository
+import com.android.calendar.persistence.calendar.CalendarRepository
 import com.google.android.material.textfield.TextInputLayout
 import ws.xsoh.etar.R
 

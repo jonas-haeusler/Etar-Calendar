@@ -34,7 +34,7 @@ import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.SwitchPreference
 import com.android.calendar.Utils
-import com.android.calendar.persistence.CalendarRepository
+import com.android.calendar.persistence.calendar.CalendarRepository
 import ws.xsoh.etar.R
 
 

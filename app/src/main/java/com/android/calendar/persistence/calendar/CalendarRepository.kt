@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.android.calendar.persistence
+package com.android.calendar.persistence.calendar
 
 import android.accounts.Account
 import android.annotation.SuppressLint
@@ -26,6 +26,7 @@ import android.content.Context
 import android.net.Uri
 import android.provider.CalendarContract
 import androidx.lifecycle.LiveData
+import com.android.calendar.persistence.ContentProviderLiveData
 import ws.xsoh.etar.R
 
 
@@ -42,11 +43,7 @@ internal class CalendarRepository(val application: Application) {
 
     private var contentResolver = application.contentResolver
 
-    private var allCalendars: CalendarLiveData
-
-    init {
-        allCalendars = CalendarLiveData(application.applicationContext)
-    }
+    private var allCalendars: CalendarLiveData = CalendarLiveData(application.applicationContext)
 
     fun getCalendarsOrderedByAccount(): LiveData<List<Calendar>> {
         return allCalendars

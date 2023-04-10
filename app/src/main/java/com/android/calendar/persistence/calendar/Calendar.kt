@@ -15,19 +15,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.android.calendar.persistence
+package com.android.calendar.persistence.calendar
 
 
 /**
  * @property isLocal This calendar is stored locally.
  */
-data class Calendar(val id: Long,
-                    val accountName: String,
-                    val accountType: String,
-                    val name: String?,
-                    val displayName: String?,
-                    val color: Int,
-                    val visible: Boolean,
-                    val syncEvents: Boolean,
-                    val isPrimary: Boolean,
-                    val isLocal: Boolean)
+data class Calendar(
+    val id: Long,
+    val accountName: String,
+    val accountType: String,
+    val name: String?,
+    val displayName: String?,
+    val color: Int,
+    val visible: Boolean,
+    val syncEvents: Boolean,
+    val isPrimary: Boolean,
+    val isLocal: Boolean
+)

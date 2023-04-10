@@ -20,8 +20,8 @@ package com.android.calendar.settings
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
-import com.android.calendar.persistence.Calendar
-import com.android.calendar.persistence.CalendarRepository
+import com.android.calendar.persistence.calendar.Calendar
+import com.android.calendar.persistence.calendar.CalendarRepository
 
 
 class MainListViewModel(application: Application) : AndroidViewModel(application) {
